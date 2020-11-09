@@ -40,9 +40,11 @@
         currentScene = 0,
         scenes = [],
         mainScene = null,
-        gameScene = null;
+        gameScene = null,
         
-        
+        highscores = [],
+        posHighscore = 10,
+        highscoresScene = null;
 
 
     window.requestAnimationFrame = (function(){
@@ -156,6 +158,19 @@
         return ~~(Math.random() * max);
     }
 
+    function addHighscore(score) {
+        posHighscore = 0;
+        while (highscores[posHighscore] > score && posHighscore < highscores.length) {
+            posHighscore += 1;
+        }
+        highscores.splice(posHighscore, 0, score);
+        if (highscores.length > 10) {
+            highscores.length = 10;
+        }
+        localStorage.highscores = highscores.join(',');
+    }
+
+
     function canPlayOgg() {
         var aud = new Audio();
         if (aud.canPlayType('audio/ogg').replace(/no/, '')) {
@@ -222,8 +237,8 @@
         // Get canvas and context
         canvas = document.getElementById('canvas');
         ctx = canvas.getContext('2d');
-        canvas.width = 600;
-        canvas.height = 300;
+        //canvas.width = 600;
+        //canvas.height = 300;
         
         // Load buffer
         buffer = document.createElement('canvas');
@@ -251,10 +266,16 @@
         //wall.push(new Rectangle(200, 50, 10, 10));
         //wall.push(new Rectangle(200, 100, 10, 10));
 
+        // Load saved highscores
+        if (localStorage.highscores) {
+            highscores = localStorage.highscores.split(',');
+        }
+
         // Start game
         run();
         repaint();
     }
+
 
     // Main Scene
     mainScene = new Scene();
@@ -275,7 +296,7 @@
     
         // Load next scene
         if (lastPress === KEY_ENTER) {
-            loadScene(gameScene);
+            loadScene(highscoresScene);
             lastPress = null;
         }
     };
@@ -354,17 +375,12 @@
         if (!pause) {
             // GameOver Reset
             if (gameover) {
-                loadScene(mainScene);
+                loadScene(highscoresScene);
             }
-            
+
             x += 6;
             if (x > canvas.width) {
                 x = 0;
-            }
-    
-            // GameOver Reset
-            if (gameover) {
-                reset();
             }
 
             // Move Body
@@ -444,6 +460,7 @@
                     gameover = true;
                     pause = true;
                     aDie.play();
+                    addHighscore(score);
                 }
             }
         }    
@@ -454,7 +471,40 @@
         }
     }
 
-    window.addEventListener('load', init, false);
+    // Highscore Scene
+    highscoresScene = new Scene();
 
+    highscoresScene.paint = function (ctx) {
+        var i = 0,
+            l = 0;
+
+        // Clean canvas
+        ctx.fillStyle = '#030';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw title
+        ctx.fillStyle = '#fff';
+        ctx.textAlign = 'center';
+        ctx.fillText('HIGH SCORES', 150, 30);
+
+        // Draw high scores
+        ctx.textAlign = 'right';
+        for (i = 0, l = highscores.length; i < l; i += 1) {
+            if (i === posHighscore) {
+                ctx.fillText('*' + highscores[i], 180, 40 + i * 10);
+            } else {
+                ctx.fillText(highscores[i], 180, 40 + i * 10);
+            }
+        }
+    };
+
+    highscoresScene.act = function () {
+        // Load next scene
+        if (lastPress === KEY_ENTER) {
+            loadScene(gameScene);
+            lastPress = null;
+        }
+    };
+    window.addEventListener('load', init, false);
     window.addEventListener('resize', resize, false);
 }(window));
