@@ -35,7 +35,12 @@
         interval = 50,
         CPS = 0,
         cicles = 0,
-        x = 50;
+        x = 50, 
+
+        currentScene = 0,
+        scenes = [],
+        mainScene = null,
+        gameScene = null;
         
         
 
@@ -49,6 +54,8 @@
             };
     }());
 
+    
+
     document.addEventListener('keydown', function (evt) {
         if (evt.which >= 37 && evt.which <= 40) {
             evt.preventDefault();
@@ -57,19 +64,6 @@
         lastPress = evt.which;
     }, false);
 
-    function resize () {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-
-        var w = window.innerWidth / buffer.width;
-        var h = window.innerHeight / buffer.height;
-        bufferScale = Math.min(h, w);
-
-        //canvas.style.width = (canvas.width * scale) + 'px';
-        //canvas.style.height = (canvas.height * scale) + 'px';
-        bufferOffsetX = (canvas.width - (buffer.width * bufferScale)) / 2;
-        bufferOffsetY = (canvas.height - (buffer.height * bufferScale)) / 2;
-    }
 
     function Rectangle(x, y, width, height) {
         this.x = (x == null) ? 0 : x;
@@ -142,6 +136,22 @@
     }
     */
 
+   function Scene() {
+    this.id = scenes.length;
+    scenes.push(this);
+    }
+    Scene.prototype = {
+        constructor: Scene,
+        load: function () {},
+        paint: function (ctx) {},
+        act: function () {}
+    };
+
+    function loadScene(scene) {
+        currentScene = scene.id;
+        scenes[currentScene].load();
+    }
+
     function random(max) {
         return ~~(Math.random() * max);
     }
@@ -155,8 +165,125 @@
         }
     }
 
+    function resize () {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
 
-    function reset() {
+        var w = window.innerWidth / buffer.width;
+        var h = window.innerHeight / buffer.height;
+        bufferScale = Math.min(h, w);
+
+        //canvas.style.width = (canvas.width * scale) + 'px';
+        //canvas.style.height = (canvas.height * scale) + 'px';
+        bufferOffsetX = (canvas.width - (buffer.width * bufferScale)) / 2;
+        bufferOffsetY = (canvas.height - (buffer.height * bufferScale)) / 2;
+    }
+
+    function repaint() {
+        window.requestAnimationFrame(repaint);
+        if (scenes.length) {
+            scenes[currentScene].paint(bufferCtx);
+        }
+        //paint(bufferCtx);
+        frames++;
+
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        //ctx.drawImage(buffer, 0, 0, canvas.width, canvas.height);
+        
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(buffer, bufferOffsetX, bufferOffsetY, buffer.width * bufferScale, buffer.height * bufferScale)
+    }
+
+    function run() {
+        setTimeout(run, interval);
+        if (scenes.length) {
+            scenes[currentScene].act();
+        }
+        var now = Date.now();
+        var deltaTime = (now - lastUpdate) / 1000;
+        if (deltaTime > 1) {
+            deltaTime = 0;
+        }
+        lastUpdate = now;
+
+        cicles += 1;
+        acumDelta += deltaTime;
+        if (acumDelta > 1) {
+            FPS = frames;
+            CPS = cicles;
+            frames = 0;
+            cicles = 0;
+            acumDelta -= 1;
+        }
+    }
+
+    function init() {
+        // Get canvas and context
+        canvas = document.getElementById('canvas');
+        ctx = canvas.getContext('2d');
+        canvas.width = 600;
+        canvas.height = 300;
+        
+        // Load buffer
+        buffer = document.createElement('canvas');
+        bufferCtx = buffer.getContext('2d');
+        buffer.width = 300;
+        buffer.height = 150;
+
+        // Load assets
+        iBody.src = 'snakeOk.png';
+        iFood.src = 'fruit.png';
+
+        if (canPlayOgg()) {
+            aEat.src = 'chomp.oga';
+            aDie.src = 'dies.oga';
+        } else {
+            Eat.src = 'chomp.oga';
+            aDie.src = 'dies.oga';
+        }
+        // Create food
+        food = new Rectangle(80, 80, 10, 10);
+        
+        // Create walls
+        //wall.push(new Rectangle(100, 50, 10, 10));
+        //wall.push(new Rectangle(100, 100, 10, 10));
+        //wall.push(new Rectangle(200, 50, 10, 10));
+        //wall.push(new Rectangle(200, 100, 10, 10));
+
+        // Start game
+        run();
+        repaint();
+    }
+
+    // Main Scene
+    mainScene = new Scene();
+
+    mainScene.paint = function (ctx) {
+        // Clean canvas
+        ctx.fillStyle = '#030';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw title
+        ctx.fillStyle = '#fff';
+        ctx.textAlign = 'center';
+        ctx.fillText('SNAKE', 150, 60);
+        ctx.fillText('Press Enter', 150, 90);
+    };
+
+    mainScene.act = function () {
+    
+        // Load next scene
+        if (lastPress === KEY_ENTER) {
+            loadScene(gameScene);
+            lastPress = null;
+        }
+    };
+    
+    // Game Scene
+    gameScene = new Scene()
+
+    gameScene.load = function () {
         score = 0;
         dir = 1;
         body.length = 0;
@@ -168,9 +295,7 @@
         gameover = false;
     }
 
-
-
-    function paint(ctx) {
+    gameScene.paint = function (ctx) {
         var i = 0;
         var l = 0;
 
@@ -223,12 +348,15 @@
 
     }
 
-    
-    function act() {
+    gameScene.act = function () {
         var i;
         var l;
         if (!pause) {
-
+            // GameOver Reset
+            if (gameover) {
+                loadScene(mainScene);
+            }
+            
             x += 6;
             if (x > canvas.width) {
                 x = 0;
@@ -326,82 +454,7 @@
         }
     }
 
-
-    function repaint() {
-        window.requestAnimationFrame(repaint);
-        paint(bufferCtx);
-        frames++;
-
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        //ctx.drawImage(buffer, 0, 0, canvas.width, canvas.height);
-        
-        ctx.imageSmoothingEnabled = false;
-        ctx.drawImage(buffer, bufferOffsetX, bufferOffsetY, buffer.width * bufferScale, buffer.height * bufferScale)
-    }
-
-    function run() {
-        setTimeout(run, interval);
-
-        var now = Date.now();
-        var deltaTime = (now - lastUpdate) / 1000;
-        if (deltaTime > 1) {
-            deltaTime = 0;
-        }
-        lastUpdate = now;
-
-        cicles += 1;
-        acumDelta += deltaTime;
-        if (acumDelta > 1) {
-            FPS = frames;
-            CPS = cicles;
-            frames = 0;
-            cicles = 0;
-            acumDelta -= 1;
-        }
-
-        act();
-    }
-
-    function init() {
-        // Get canvas and context
-        canvas = document.getElementById('canvas');
-        ctx = canvas.getContext('2d');
-        canvas.width = 600;
-        canvas.height = 300;
-        
-        // Load buffer
-        buffer = document.createElement('canvas');
-        bufferCtx = buffer.getContext('2d');
-        buffer.width = 300;
-        buffer.height = 150;
-
-        // Load assets
-        iBody.src = 'snakeOk.png';
-        iFood.src = 'fruit.png';
-
-        if (canPlayOgg()) {
-            aEat.src = 'chomp.oga';
-            aDie.src = 'dies.oga';
-        } else {
-            Eat.src = 'chomp.oga';
-            aDie.src = 'dies.oga';
-        }
-        // Create food
-        food = new Rectangle(80, 80, 10, 10);
-        
-        // Create walls
-        //wall.push(new Rectangle(100, 50, 10, 10));
-        //wall.push(new Rectangle(100, 100, 10, 10));
-        //wall.push(new Rectangle(200, 50, 10, 10));
-        //wall.push(new Rectangle(200, 100, 10, 10));
-
-        // Start game
-        resize();
-        run();
-        repaint();
-    
-    }
     window.addEventListener('load', init, false);
+
     window.addEventListener('resize', resize, false);
 }(window));
