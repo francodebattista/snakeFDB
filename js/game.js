@@ -265,6 +265,10 @@
         food = new Rectangle(80, 80, 10, 10);
 
         // Create fruit
+        setTimeout(function newFruit(){
+            fruit.x = random(canvas.width / 10 - 1) * 10;
+            fruit.y = random(canvas.height / 10 - 1) * 10;
+        }, 5000);
         fruit = new Rectangle(80, 80, 10, 10);
 
         
@@ -353,9 +357,9 @@
         food.drawImage(ctx, iFood);
 
         // Draw fruit
-        setTimeout(fruit.drawImage(ctx, iFruit), 300);
-        ctx.strokeStyle = '#f00';
         
+        ctx.strokeStyle = '#f00';
+        fruit.drawImage(ctx, iFruit);
         
         // Debug last key pressed
         //ctx.fillStyle = '#fff';
@@ -457,10 +461,28 @@
 
             // Fruit Intersects
             if (body[0].intersects(fruit)) {
-                score += 10;
-                fruit.x = random(buffer.width / 10 - 1) * 10;
-                fruit.y = random(buffer.height / 10 - 1) * 10;
                 aEat.play()
+                score += 10;
+                fruit.x = -100
+                fruit.y = -100
+                setTimeout(function newFruit(){
+                    fruit.x = random(canvas.width / 10 - 1) * 10;
+                    fruit.y = random(canvas.height / 10 - 1) * 10;
+                }, 10000);
+
+                fetch('https://jsonplaceholder.typicode.com/posts/?score=${score}',{
+                    method:'POST',
+                    body:score
+                    })
+                    .then(function (response){
+                        if(response.ok){
+                            console.log('Succesfully score sent',response);
+                        }
+                    })
+                    .catch(function (error) {
+                        return console.log('Error trying to send the score');
+                    })
+                
             }
             
 
