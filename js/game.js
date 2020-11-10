@@ -20,11 +20,13 @@
         fullscreen = false,
         body = [],
         food = null,
+        fruit = null,
         //wall = [],
         dir = 0,
         score = 0,
         iBody = new Image(),
         iFood = new Image(),
+        iFruit = new Image(),
         aEat = new Audio(),
         aDie = new Audio(),
 
@@ -249,6 +251,8 @@
         // Load assets
         iBody.src = 'snakeOk.png';
         iFood.src = 'fruit.png';
+        iFruit.src = 'lemon.jpeg';
+
 
         if (canPlayOgg()) {
             aEat.src = 'chomp.oga';
@@ -259,6 +263,10 @@
         }
         // Create food
         food = new Rectangle(80, 80, 10, 10);
+
+        // Create fruit
+        fruit = new Rectangle(80, 80, 10, 10);
+
         
         // Create walls
         //wall.push(new Rectangle(100, 50, 10, 10));
@@ -313,6 +321,8 @@
         body.push(new Rectangle(0, 0, 10, 10));
         food.x = random(buffer.width / 10 - 1) * 10;
         food.y = random(buffer.height / 10 - 1) * 10;
+        fruit.x = random(buffer.width / 10 - 1) * 10;
+        fruit.y = random(buffer.height / 10 - 1) * 10;    
         gameover = false;
     }
 
@@ -339,10 +349,13 @@
         //}
 
         // Draw food
-        //ctx.fillStyle = '#f00';
-        //food.fill(ctx);
         ctx.strokeStyle = '#f00';
         food.drawImage(ctx, iFood);
+
+        // Draw fruit
+        setTimeout(fruit.drawImage(ctx, iFruit), 300);
+        ctx.strokeStyle = '#f00';
+        
         
         // Debug last key pressed
         //ctx.fillStyle = '#fff';
@@ -442,11 +455,24 @@
                 aEat.play()
             }
 
+            // Fruit Intersects
+            if (body[0].intersects(fruit)) {
+                score += 10;
+                fruit.x = random(buffer.width / 10 - 1) * 10;
+                fruit.y = random(buffer.height / 10 - 1) * 10;
+                aEat.play()
+            }
+            
+
             // Wall Intersects
             //for (i = 0, l = wall.length; i < l; i += 1) {
             //    if (food.intersects(wall[i])) {
             //        food.x = random(canvas.width / 10 - 1) * 10;
             //        food.y = random(canvas.height / 10 - 1) * 10;
+            //    }
+            //    if (fruit.intersects(wall[i])) {
+            //        fruit.x = random(canvas.width / 10 - 1) * 10;
+            //        fruit.y = random(canvas.height / 10 - 1) * 10;
             //    }
             //    if (body[0].intersects(wall[i])) {
             //        gameover = true;
